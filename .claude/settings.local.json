@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node:*)",
+      "Bash(npx nuxi@latest:*)",
+      "Bash(curl:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(cygstart:*)",
+      "Bash(start:*)"
+    ]
+  }
+}

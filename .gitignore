@@ -1,0 +1,13 @@
+.node
+.nuxt
+.output
+.env
+.env.*
+!.env.example
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+.DS_Store
+*.local
+node_modules
