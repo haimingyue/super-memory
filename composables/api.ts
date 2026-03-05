@@ -51,18 +51,29 @@ export async function askQuestion(question: string, memoryId?: number) {
  * 调用 AI 聊天接口（通用对话）
  */
 export async function chatWithAI(messages: Array<{ role: 'user' | 'assistant', content: string }>) {
+  const latestUserMessage = [...messages].reverse().find((m) => m.role === 'user')?.content ?? ''
+
   try {
-    const response = await $fetch<{ reply?: string, answer?: string }>(`${API_BASE_URL}/ai/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: {
-        messages,
-      },
-    })
+    // Prefer GET for compatibility with older backend instances.
+    const response = await $fetch<{ reply?: string, answer?: string }>(
+      `${API_BASE_URL}/ai/chat?prompt=${encodeURIComponent(latestUserMessage)}`,
+      { method: 'GET' }
+    )
     return response
   } catch (error) {
+    const status = (error as { response?: { status?: number } })?.response?.status
+    if (status === 404 || status === 405) {
+      const fallback = await $fetch<{ reply?: string, answer?: string }>(`${API_BASE_URL}/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: {
+          messages,
+        },
+      })
+      return fallback
+    }
     console.error('AI 聊天失败:', error)
     throw error
   }
