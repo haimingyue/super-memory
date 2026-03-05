@@ -89,19 +89,12 @@
         <div v-else class="conversation">
           <article v-for="(message, index) in messages" :key="index" :class="['chat-item', message.role]">
             <div class="bubble">
-              <template v-if="message.role === 'user'">
-                {{ message.content }}
-              </template>
-              <template v-else-if="message.feedback">
-                <h3>{{ message.feedback.title }}</h3>
-                <p>{{ message.feedback.description }}</p>
-                <p v-if="message.feedback.example" class="example">示例：{{ message.feedback.example }}</p>
-              </template>
+              <p class="message-text">{{ message.content }}</p>
             </div>
           </article>
         </div>
 
-        <div v-if="loading" class="loading-tip">正在分析你的记忆内容...</div>
+        <div v-if="loading" class="loading-tip">大模型正在思考...</div>
       </section>
 
       <footer class="composer-wrap">
@@ -125,17 +118,11 @@ definePageMeta({
 })
 
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-
-interface Feedback {
-  title: string
-  description: string
-  example?: string
-}
+import { chatWithAI } from '~/composables/api'
 
 interface Message {
   role: 'user' | 'assistant'
-  content?: string
-  feedback?: Feedback
+  content: string
 }
 
 const prompt = ref('')
@@ -154,33 +141,6 @@ const quickActions = [{ label: '新聊天', onClick: startNewChat }]
 const projects = ['新项目', '超级记忆项目开发', '临时', '毕设', 'Python', '毕业设计']
 const recentItems = ['超级记忆页面设计', '记忆训练方法总结']
 
-const memoryMethods = [
-  {
-    keywords: ['数字', '编号', '顺序', '列表', '日期', '电话', '号码', '密码'],
-    title: '推荐使用：挂钩记忆法 (Peg System)',
-    description: '适合记有顺序的信息，用固定图像挂钩数字，再把新内容和挂钩图像强联想。',
-    example: '记“1苹果 2香蕉 3橙子”，可联想“铅笔戳苹果、天鹅叼香蕉、耳朵挂橙子”。'
-  },
-  {
-    keywords: ['故事', '流程', '步骤', '事件', '清单'],
-    title: '推荐使用：链式记忆法 (Link Method)',
-    description: '把每个元素串成一个夸张连续的故事，让上下文自然触发回忆。',
-    example: '把“牛奶-信件-水果”想成牛奶冲出冰箱淹到信箱，信封长出水果。'
-  },
-  {
-    keywords: ['演讲', '文章', '长列表', '房间', '地点', '路线'],
-    title: '推荐使用：记忆宫殿法 (Memory Palace)',
-    description: '将信息放在熟悉空间的固定位置，按路线回忆，稳定且可扩展。',
-    example: '开场放门口、要点一放客厅、要点二放厨房，按行走顺序提取。'
-  },
-  {
-    keywords: ['外语', '词汇', '抽象', '单词', '概念'],
-    title: '推荐使用：联想法 (Association)',
-    description: '利用音、形、义与已有知识建立连接，降低生词记忆成本。',
-    example: '记“ponderous（笨重）”可联想“胖得要死”，形成语音钩子。'
-  }
-]
-
 const toggleUserMenu = () => {
   isUserMenuOpen.value = !isUserMenuOpen.value
 }
@@ -197,9 +157,7 @@ const goChapters = async () => {
 
 const handleUserbarClick = (event: MouseEvent) => {
   event.stopPropagation()
-  console.log('用户栏被点击，当前状态：', isUserMenuOpen.value)
   isUserMenuOpen.value = !isUserMenuOpen.value
-  console.log('新状态：', isUserMenuOpen.value)
 }
 
 const onDocumentClick = (event: MouseEvent) => {
@@ -209,7 +167,6 @@ const onDocumentClick = (event: MouseEvent) => {
 
   const target = event.target as Node | null
   if (target && menuRootRef.value && !menuRootRef.value.contains(target)) {
-    console.log('点击了菜单外部，关闭菜单')
     isUserMenuOpen.value = false
   }
 }
@@ -221,7 +178,6 @@ const onDocumentKeydown = (event: KeyboardEvent) => {
 }
 
 onMounted(() => {
-  console.log('组件已挂载')
   document.addEventListener('click', onDocumentClick)
   document.addEventListener('keydown', onDocumentKeydown)
 })
@@ -231,36 +187,13 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', onDocumentKeydown)
 })
 
-const getFeedback = (text: string): Feedback => {
-  const normalized = text.toLowerCase()
-  let best: Feedback | null = null
-  let bestScore = 0
-
-  for (const method of memoryMethods) {
-    const score = method.keywords.filter((keyword) => normalized.includes(keyword)).length
-    if (score > bestScore) {
-      bestScore = score
-      best = {
-        title: method.title,
-        description: method.description,
-        example: method.example
-      }
-    }
-  }
-
-  return best ?? {
-    title: '综合记忆建议',
-    description: '建议拆块编码 + 图像联想 + 间隔复习三步走，先建检索线索，再强化提取。',
-    example: '把内容切成 3-5 个块，每块绑定一个夸张画面，1天后和3天后各复述一次。'
-  }
-}
-
-const handleSubmit = () => {
+const handleSubmit = async () => {
   const content = prompt.value.trim()
   if (!content || loading.value) {
     return
   }
 
+  // 添加用户消息
   messages.value.push({
     role: 'user',
     content
@@ -269,14 +202,27 @@ const handleSubmit = () => {
   prompt.value = ''
   loading.value = true
 
-  setTimeout(() => {
+  try {
+    const history = messages.value.map((item) => ({
+      role: item.role,
+      content: item.content
+    }))
+    const response = await chatWithAI(history)
+    const answer = response.reply || response.answer || '抱歉，我暂时无法回答这个问题。'
+
     messages.value.push({
       role: 'assistant',
-      feedback: getFeedback(content)
+      content: answer
     })
-
+  } catch (error) {
+    console.error('AI 请求失败:', error)
+    messages.value.push({
+      role: 'assistant',
+      content: '当前无法连接大模型服务，请确认后端和 API Key 配置后重试。'
+    })
+  } finally {
     loading.value = false
-  }, 700)
+  }
 }
 </script>
 
@@ -286,12 +232,14 @@ const handleSubmit = () => {
   font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   background: #f3f3f3;
   color: #161616;
+  overflow: hidden;
 }
 
 .train-shell {
-  min-height: 100vh;
+  height: 100vh;
   display: grid;
   grid-template-columns: 260px 1fr;
+  overflow: hidden;
 }
 
 .left-sidebar {
@@ -301,6 +249,8 @@ const handleSubmit = () => {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .brand-row {
@@ -481,7 +431,9 @@ const handleSubmit = () => {
 .chat-stage {
   display: grid;
   grid-template-rows: auto 1fr auto;
-  min-height: 100vh;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .stage-top {
@@ -508,6 +460,9 @@ const handleSubmit = () => {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .hero-block {
@@ -572,9 +527,9 @@ const handleSubmit = () => {
   margin: 0;
 }
 
-.example {
-  margin-top: 8px !important;
-  color: #535353;
+.message-text {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .loading-tip {
@@ -650,16 +605,28 @@ const handleSubmit = () => {
 }
 
 @media (max-width: 900px) {
+  :global(body) {
+    overflow: auto;
+  }
+
   .train-shell {
+    height: auto;
     grid-template-columns: 1fr;
+    overflow: visible;
   }
 
   .left-sidebar {
     display: none;
   }
 
+  .chat-stage {
+    height: auto;
+    overflow: visible;
+  }
+
   .stage-content {
     padding-top: 9vh;
+    overflow: visible;
   }
 
   .hero-block h1 {
