@@ -286,20 +286,29 @@ const handleSubmit = async () => {
     const response = await memoryChat(content, sessionId.value)
     sessionId.value = response.sessionId
 
-    if ((response.replyType === 'draft' || response.replyType === 'revision') && response.draft) {
+    const isMemoryDraftReply = (
+      response.replyType === 'memory_draft'
+      || response.replyType === 'memory_revision'
+      || response.replyType === 'draft'
+      || response.replyType === 'revision'
+    )
+    const isMemoryCardReply = response.replyType === 'memory_card' || response.replyType === 'final_card'
+    const degradedTip = response.degraded ? `\n\n[系统降级] ${response.degradeReason || 'none'}` : ''
+
+    if (isMemoryDraftReply && response.draft) {
       messages.value.push({
         id: newMessageId(),
         role: 'assistant',
         type: 'memory_draft',
-        content: response.replyText,
+        content: `${response.replyText}${degradedTip}`,
         memoryDraft: response.draft,
       })
-    } else if (response.replyType === 'final_card' && response.finalCard) {
+    } else if (isMemoryCardReply && response.finalCard) {
       messages.value.push({
         id: newMessageId(),
         role: 'assistant',
         type: 'memory_card',
-        content: response.replyText,
+        content: `${response.replyText}${degradedTip}`,
         finalCard: response.finalCard,
       })
     } else {
@@ -307,7 +316,7 @@ const handleSubmit = async () => {
         id: newMessageId(),
         role: 'assistant',
         type: 'text',
-        content: response.replyText,
+        content: `${response.replyText}${degradedTip}`,
       })
     }
   } catch (error) {

@@ -19,6 +19,30 @@
       </el-tag>
     </div>
 
+    <template v-if="draft.contrastMatrix">
+      <el-divider content-position="left">对比矩阵</el-divider>
+      <div class="matrix-grid">
+        <div class="matrix-col">
+          <p class="matrix-title">{{ draft.contrastMatrix.titleA || 'A列' }}</p>
+          <ul class="matrix-list">
+            <li v-for="(item, index) in draft.contrastMatrix.a" :key="`a-${index}-${item}`">{{ item }}</li>
+          </ul>
+        </div>
+        <div class="matrix-col">
+          <p class="matrix-title">{{ draft.contrastMatrix.titleB || 'B列' }}</p>
+          <ul class="matrix-list">
+            <li v-for="(item, index) in draft.contrastMatrix.b" :key="`b-${index}-${item}`">{{ item }}</li>
+          </ul>
+        </div>
+        <div class="matrix-col">
+          <p class="matrix-title">{{ draft.contrastMatrix.titleCommon || '共同点' }}</p>
+          <ul class="matrix-list">
+            <li v-for="(item, index) in draft.contrastMatrix.common" :key="`c-${index}-${item}`">{{ item }}</li>
+          </ul>
+        </div>
+      </div>
+    </template>
+
     <el-divider content-position="left">想象画面</el-divider>
     <ol class="imagery-list">
       <li v-for="(line, index) in draft.imagery" :key="`${index}-${line}`">
@@ -71,10 +95,40 @@ defineProps<{
   line-height: 1.8;
 }
 
+.matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.matrix-col {
+  border: 1px solid #e2e2e2;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fff;
+}
+
+.matrix-title {
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.matrix-list {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+
 .recap-block {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
   font-family: Consolas, 'Courier New', monospace;
+}
+
+@media (max-width: 760px) {
+  .matrix-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

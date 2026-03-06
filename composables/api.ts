@@ -33,6 +33,16 @@ export interface MemoryDraft {
   keywords: string[]
   imagery: string[]
   recap: string
+  contrastMatrix?: {
+    titleA?: string
+    titleB?: string
+    titleCommon?: string
+    a: string[]
+    b: string[]
+    common: string[]
+    scenes?: string[]
+    question?: string
+  } | null
 }
 
 export interface MemoryCard {
@@ -109,8 +119,12 @@ export interface MemoryStrategyIR {
 
 export interface MemoryChatResponse {
   sessionId: string
-  replyType: 'draft' | 'question' | 'revision' | 'final_card'
+  replyType: 'chat' | 'memory_draft' | 'memory_revision' | 'memory_card' | 'draft' | 'question' | 'revision' | 'final_card'
   replyText: string
+  mode?: 'general_chat' | 'memory_flow'
+  triggeredBy?: 'qa_pair' | 'memory_intent' | 'manual_revision' | 'finalize' | null
+  degraded?: boolean
+  degradeReason?: 'llm_timeout' | 'invalid_llm_payload' | 'fallback_rule_engine' | 'none' | null
   draft?: MemoryDraft
   finalCard?: MemoryCard
   strategyIr?: MemoryStrategyIR
