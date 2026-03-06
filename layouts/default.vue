@@ -6,7 +6,7 @@
       </h1>
       <p class="tagline">Develop a Super Power Memory</p>
       <nav class="nav">
-        <NuxtLink to="/train">记忆训练</NuxtLink>
+        <NuxtLink to="/copilot">Copilot</NuxtLink>
         <NuxtLink to="/memory-methods">记忆方法</NuxtLink>
         <NuxtLink to="/chapters">课程章节</NuxtLink>
       </nav>

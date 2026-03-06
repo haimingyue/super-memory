@@ -26,6 +26,36 @@ export interface MemorySolveData {
   resultText: string
 }
 
+export interface MemoryDraft {
+  type: string
+  typeLabel: string
+  method: string
+  methodLabel: string
+  keywords: string[]
+  imagery: string[]
+  recap: string
+}
+
+export interface MemoryCard {
+  question: string
+  answer: string
+  keywords: string[]
+  imagery: string[]
+  recap: string
+  cardFormat: {
+    front: string
+    back: string
+  }
+}
+
+export interface MemoryChatResponse {
+  sessionId: string
+  replyType: 'draft' | 'question' | 'revision' | 'final_card'
+  replyText: string
+  draft?: MemoryDraft
+  finalCard?: MemoryCard
+}
+
 /**
  * 调用 AI 分析接口
  */
@@ -121,6 +151,22 @@ export async function solveMemory(rawText: string) {
   }
 
   return response.data
+}
+
+/**
+ * 记忆共创对话接口
+ */
+export async function memoryChat(message: string, sessionId?: string) {
+  return await $fetch<MemoryChatResponse>(`${API_BASE_URL}/memory/chat`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: {
+      sessionId,
+      message,
+    },
+  })
 }
 
 /**

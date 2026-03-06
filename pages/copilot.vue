@@ -77,20 +77,28 @@
 
     <main class="chat-stage">
       <header class="stage-top">
-        <div class="model-name">Memory Trainer 5.2</div>
+        <div class="model-name">Copilot</div>
       </header>
 
       <section class="stage-content">
         <div v-if="messages.length === 0" class="hero-block">
           <h1>我们先从哪里开始呢？</h1>
-          <p>输入你想记忆的内容，我会给出最合适的记忆方法。</p>
+          <p>输入题目和答案，Copilot 会自动生成记忆卡片。</p>
         </div>
 
         <div v-else class="conversation">
-          <article v-for="(message, index) in messages" :key="index" :class="['chat-item', message.role]">
+          <article v-for="message in messages" :key="message.id" :class="['chat-item', message.role]">
             <div class="bubble">
-              <MemoryCard v-if="message.type === 'memory' && message.memoryData" :data="message.memoryData" />
-              <p v-else class="message-text">{{ message.content }}</p>
+              <MemoryDraftCard
+                v-if="message.type === 'memory_draft' && message.memoryDraft"
+                :draft="message.memoryDraft"
+              />
+              <MemoryCard
+                v-else-if="message.type === 'memory_final_card' && message.finalCard"
+                :card="message.finalCard"
+                @save="handleSaveCard"
+              />
+              <p v-else class="message-text">{{ message.content || '' }}</p>
             </div>
           </article>
         </div>
@@ -109,7 +117,7 @@
           <textarea
             v-model="prompt"
             rows="3"
-            placeholder="请输入题目+答案（支持多行）"
+            placeholder="输入题目+答案生成草稿；再继续对话修改；说“生成卡片”输出最终版"
             aria-label="输入记忆内容"
           />
           <button class="send-btn" type="submit" :disabled="loading || !prompt.trim()">➤</button>
@@ -125,31 +133,37 @@ definePageMeta({
 })
 
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import MemoryCard from '~/components/MemoryCard.vue'
-import { solveMemory, type MemorySolveData } from '~/composables/api'
+import MemoryDraftCard from '~/components/MemoryDraftCard.vue'
+import { memoryChat, type MemoryCard as MemoryFinalCard, type MemoryDraft } from '~/composables/api'
 
 interface Message {
+  id: string
   role: 'user' | 'assistant'
-  content: string
-  type?: 'text' | 'memory'
-  memoryData?: MemorySolveData
+  type: 'text' | 'memory_draft' | 'memory_final_card'
+  content?: string
+  memoryDraft?: MemoryDraft
+  finalCard?: MemoryFinalCard
 }
 
 const prompt = ref('')
 const loading = ref(false)
 const messages = ref<Message[]>([])
+const sessionId = ref<string | undefined>(undefined)
 const isUserMenuOpen = ref(false)
 const menuRootRef = ref<HTMLElement | null>(null)
 
 const startNewChat = () => {
   prompt.value = ''
   loading.value = false
+  sessionId.value = undefined
   messages.value = []
 }
 
 const quickActions = [{ label: '新聊天', onClick: startNewChat }]
 const projects = ['新项目', '超级记忆项目开发', '临时', '毕设', 'Python', '毕业设计']
-const recentItems = ['超级记忆页面设计', '记忆训练方法总结']
+const recentItems = ['Copilot 页面设计', '记忆方法总结']
 const isDev = import.meta.dev
 
 const demoInputs = {
@@ -178,6 +192,17 @@ UDP：无连接，不保证可靠，开销小，速度快
 
 const fillDemo = (key: keyof typeof demoInputs) => {
   prompt.value = demoInputs[key]
+}
+
+const newMessageId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+const handleSaveCard = () => {
+  ElMessage.success('已保存（当前为会话内保存示例）')
 }
 
 const goMemoryMethods = async () => {
@@ -230,29 +255,51 @@ const handleSubmit = async () => {
 
   // 添加用户消息
   messages.value.push({
+    id: newMessageId(),
     role: 'user',
     content,
-    type: 'text'
+    type: 'text',
   })
 
   prompt.value = ''
   loading.value = true
 
   try {
-    const memoryData = await solveMemory(content)
-    messages.value.push({
-      role: 'assistant',
-      type: 'memory',
-      content: memoryData.resultText,
-      memoryData
-    })
+    const response = await memoryChat(content, sessionId.value)
+    sessionId.value = response.sessionId
+
+    if ((response.replyType === 'draft' || response.replyType === 'revision') && response.draft) {
+      messages.value.push({
+        id: newMessageId(),
+        role: 'assistant',
+        type: 'memory_draft',
+        content: response.replyText,
+        memoryDraft: response.draft,
+      })
+    } else if (response.replyType === 'final_card' && response.finalCard) {
+      messages.value.push({
+        id: newMessageId(),
+        role: 'assistant',
+        type: 'memory_final_card',
+        content: response.replyText,
+        finalCard: response.finalCard,
+      })
+    } else {
+      messages.value.push({
+        id: newMessageId(),
+        role: 'assistant',
+        type: 'text',
+        content: response.replyText,
+      })
+    }
   } catch (error) {
     console.error('AI 请求失败:', error)
     messages.value.push({
+      id: newMessageId(),
       role: 'assistant',
       type: 'text',
       content: '记忆引擎暂时不可用，请确认后端服务后重试。'
-    })
+    }) 
   } finally {
     loading.value = false
   }
