@@ -97,6 +97,7 @@
                 v-else-if="message.type === 'memory_card' && message.finalCard"
                 :card="message.finalCard"
                 @save="handleSaveCard"
+                @continue-edit="handleContinueEdit"
               />
               <p v-else class="message-text">{{ message.content || '' }}</p>
             </div>
@@ -202,7 +203,24 @@ const newMessageId = () => {
 }
 
 const handleSaveCard = () => {
-  ElMessage.success('已保存（当前为会话内保存示例）')
+  const latestCard = [...messages.value].reverse().find((m) => m.type === 'memory_card' && m.finalCard)?.finalCard
+  if (!latestCard) {
+    ElMessage.warning('当前没有可保存的卡片')
+    return
+  }
+  try {
+    const key = 'memory_saved_cards'
+    const prev = JSON.parse(localStorage.getItem(key) || '[]') as Array<unknown>
+    prev.unshift(latestCard)
+    localStorage.setItem(key, JSON.stringify(prev.slice(0, 50)))
+    ElMessage.success('卡片已保存到本地')
+  } catch {
+    ElMessage.success('已保存（当前为会话内保存示例）')
+  }
+}
+
+const handleContinueEdit = () => {
+  prompt.value = '请基于刚才的最终卡片继续修改：'
 }
 
 const goMemoryMethods = async () => {

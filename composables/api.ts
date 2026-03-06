@@ -36,8 +36,75 @@ export interface MemoryDraft {
 }
 
 export interface MemoryCard {
+  id: string
   front: string
   back: string
+  question: string
+  answer: string
+  keywords: string[]
+  imagery: string[]
+  recap: string
+  strategySummary: {
+    primaryMethod: string
+    secondaryMethods: string[]
+    hookSystem: string
+    qualityScore?: number | null
+    summaryText: string
+  }
+  cardFormat: {
+    standard: {
+      front: string
+      back: string
+    }
+    ankiText: string
+    structured: Record<string, unknown>
+  }
+}
+
+export interface MemoryStrategyAnchor {
+  index: number
+  source: string
+  visual: string
+  hook?: string | null
+  functionHint?: string | null
+  abstractLevel?: string | null
+}
+
+export interface MemoryStrategyIR {
+  version: string
+  task: {
+    question: string
+    rawAnswerLines: string[]
+  }
+  analysis: {
+    contentType: string
+    memoryGoal: string
+    difficulty: string
+    reason: string
+  }
+  strategy: {
+    primaryMethod: string
+    secondaryMethods: string[]
+    hookPolicy: {
+      useHooks: boolean
+      hookSystem: string
+      hookPurpose: string
+    }
+  }
+  anchors: MemoryStrategyAnchor[]
+  outputPolicy: {
+    keywordCount: number
+    imagerySentenceCount: number
+    recapStyle: string
+    tone: string
+    allowAbstractWords: boolean
+  }
+  quality?: {
+    qualityScore: number
+    issues: string[]
+    suggestions: string[]
+    autoFixApplied: string[]
+  }
 }
 
 export interface MemoryChatResponse {
@@ -46,6 +113,7 @@ export interface MemoryChatResponse {
   replyText: string
   draft?: MemoryDraft
   finalCard?: MemoryCard
+  strategyIr?: MemoryStrategyIR
 }
 
 /**
