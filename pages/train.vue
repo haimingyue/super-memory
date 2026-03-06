@@ -89,22 +89,29 @@
         <div v-else class="conversation">
           <article v-for="(message, index) in messages" :key="index" :class="['chat-item', message.role]">
             <div class="bubble">
-              <p class="message-text">{{ message.content }}</p>
+              <MemoryCard v-if="message.type === 'memory' && message.memoryData" :data="message.memoryData" />
+              <p v-else class="message-text">{{ message.content }}</p>
             </div>
           </article>
         </div>
 
-        <div v-if="loading" class="loading-tip">大模型正在思考...</div>
+        <div v-if="loading" class="loading-tip">记忆引擎正在生成中...</div>
       </section>
 
       <footer class="composer-wrap">
+        <div v-if="isDev" class="dev-tools">
+          <span class="dev-label">示例填充</span>
+          <button type="button" class="dev-btn" @click="fillDemo('osi')">OSI 七层</button>
+          <button type="button" class="dev-btn" @click="fillDemo('tcpUdp')">TCP vs UDP</button>
+          <button type="button" class="dev-btn" @click="fillDemo('pm')">五大过程组</button>
+        </div>
         <form class="composer" @submit.prevent="handleSubmit">
-          <input
+          <textarea
             v-model="prompt"
-            type="text"
-            placeholder="有问题，尽管问"
+            rows="3"
+            placeholder="请输入题目+答案（支持多行）"
             aria-label="输入记忆内容"
-          >
+          />
           <button class="send-btn" type="submit" :disabled="loading || !prompt.trim()">➤</button>
         </form>
       </footer>
@@ -118,11 +125,14 @@ definePageMeta({
 })
 
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { chatWithAI } from '~/composables/api'
+import MemoryCard from '~/components/MemoryCard.vue'
+import { solveMemory, type MemorySolveData } from '~/composables/api'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  type?: 'text' | 'memory'
+  memoryData?: MemorySolveData
 }
 
 const prompt = ref('')
@@ -140,9 +150,34 @@ const startNewChat = () => {
 const quickActions = [{ label: '新聊天', onClick: startNewChat }]
 const projects = ['新项目', '超级记忆项目开发', '临时', '毕设', 'Python', '毕业设计']
 const recentItems = ['超级记忆页面设计', '记忆训练方法总结']
+const isDev = import.meta.dev
 
-const toggleUserMenu = () => {
-  isUserMenuOpen.value = !isUserMenuOpen.value
+const demoInputs = {
+  osi: `题目：OSI 七层模型
+答案：
+1. 物理层：传输比特流与电信号
+2. 数据链路层：成帧、差错检测、MAC
+3. 网络层：路由与寻址（IP）
+4. 传输层：端到端传输（TCP/UDP）
+5. 会话层：建立与维护会话
+6. 表示层：编码、压缩、加密
+7. 应用层：提供用户应用服务`,
+  tcpUdp: `题目：TCP vs UDP 的区别
+答案：
+TCP：面向连接，可靠传输，有拥塞控制，速度相对慢
+UDP：无连接，不保证可靠，开销小，速度快
+联系：都工作在传输层，都用于端到端通信`,
+  pm: `题目：项目管理五大过程组
+答案：
+一、启动：明确目标并授权项目
+二、规划：制定范围、进度、成本与风险计划
+三、执行：组织资源并交付工作成果
+四、监控：跟踪偏差并纠正
+五、收尾：验收交付并总结归档`
+}
+
+const fillDemo = (key: keyof typeof demoInputs) => {
+  prompt.value = demoInputs[key]
 }
 
 const goMemoryMethods = async () => {
@@ -196,29 +231,27 @@ const handleSubmit = async () => {
   // 添加用户消息
   messages.value.push({
     role: 'user',
-    content
+    content,
+    type: 'text'
   })
 
   prompt.value = ''
   loading.value = true
 
   try {
-    const history = messages.value.map((item) => ({
-      role: item.role,
-      content: item.content
-    }))
-    const response = await chatWithAI(history)
-    const answer = response.reply || response.answer || '抱歉，我暂时无法回答这个问题。'
-
+    const memoryData = await solveMemory(content)
     messages.value.push({
       role: 'assistant',
-      content: answer
+      type: 'memory',
+      content: memoryData.resultText,
+      memoryData
     })
   } catch (error) {
     console.error('AI 请求失败:', error)
     messages.value.push({
       role: 'assistant',
-      content: '当前无法连接大模型服务，请确认后端和 API Key 配置后重试。'
+      type: 'text',
+      content: '记忆引擎暂时不可用，请确认后端服务后重试。'
     })
   } finally {
     loading.value = false
@@ -541,33 +574,63 @@ const handleSubmit = async () => {
   padding: 16px 24px 26px;
 }
 
+.dev-tools {
+  max-width: 760px;
+  margin: 0 auto 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.dev-label {
+  color: #737373;
+  font-size: 12px;
+}
+
+.dev-btn {
+  border: 1px solid #d5d5d5;
+  background: #f4f4f4;
+  color: #2b2b2b;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dev-btn:hover {
+  background: #ebebeb;
+}
+
 .composer {
   max-width: 760px;
   margin: 0 auto;
   background: #ececec;
   border: 1px solid #d9d9d9;
-  border-radius: 999px;
-  min-height: 56px;
-  padding: 8px 9px 8px 12px;
+  border-radius: 16px;
+  min-height: 88px;
+  padding: 10px;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.03);
 }
 
-.composer input {
+.composer textarea {
   flex: 1;
   min-width: 0;
   border: 0;
   outline: none;
+  resize: vertical;
+  min-height: 62px;
   background: transparent;
-  font-size: 18px;
-  transform: scale(0.55);
-  transform-origin: left center;
+  font-size: 14px;
   color: #343434;
+  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  line-height: 1.6;
 }
 
-.composer input::placeholder {
+.composer textarea::placeholder {
   color: #888888;
 }
 

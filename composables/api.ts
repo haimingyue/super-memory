@@ -3,6 +3,29 @@
  */
 const API_BASE_URL = 'http://localhost:8000/api'
 
+export interface MemorySolveData {
+  parsed: {
+    question: string
+    answerText: string
+    answerLines: string[]
+    raw: string
+  }
+  type: 'sequence_list' | 'numbered_list' | 'concept_definition' | 'compare_contrast' | 'number_or_code' | 'general'
+  typeLabel: string
+  method: 'link_method' | 'peg_method' | 'analogy_method' | 'contrast_matrix_method' | 'chunk_and_encode_method'
+  methodLabel: string
+  resultBlocks: {
+    meta: {
+      typeLabel: string
+      methodLabel: string
+    }
+    keywords: string[]
+    imagery: string[]
+    recap: string
+  }
+  resultText: string
+}
+
 /**
  * 调用 AI 分析接口
  */
@@ -77,6 +100,27 @@ export async function chatWithAI(messages: Array<{ role: 'user' | 'assistant', c
     console.error('AI 聊天失败:', error)
     throw error
   }
+}
+
+/**
+ * 调用 Memory Engine 接口
+ */
+export async function solveMemory(rawText: string) {
+  const response = await $fetch<{ ok: boolean, data?: MemorySolveData, message?: string }>(`${API_BASE_URL}/memory/solve`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: {
+      rawText,
+    },
+  })
+
+  if (!response.ok || !response.data) {
+    throw new Error(response.message || '记忆引擎处理失败')
+  }
+
+  return response.data
 }
 
 /**
