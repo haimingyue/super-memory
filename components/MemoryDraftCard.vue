@@ -56,15 +56,50 @@
         <pre class="recap-block">{{ draft.recap }}</pre>
       </template>
     </el-alert>
+
+    <template v-if="finalReadableStory">
+      <el-divider content-position="left">完整故事</el-divider>
+      <div class="story-head">
+        <el-tag size="small" :type="storySourceType">{{ storySourceLabel }}</el-tag>
+      </div>
+      <el-alert :closable="false" type="success" show-icon>
+        <template #default>
+          <pre class="story-block">{{ finalReadableStory }}</pre>
+        </template>
+      </el-alert>
+      <el-alert
+        v-if="isDev && storyIssues.length > 0"
+        :closable="false"
+        type="info"
+        class="story-issues"
+      >
+        <template #default>
+          <div>story issues: {{ storyIssues.join(' | ') }}</div>
+        </template>
+      </el-alert>
+    </template>
   </el-card>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { MemoryDraft } from '~/composables/api'
 
-defineProps<{
+const props = defineProps<{
   draft: MemoryDraft
 }>()
+
+const finalReadableStory = computed(() => {
+  const story = props.draft.memoryPlan?.final_readable_story
+  return typeof story === 'string' ? story.trim() : ''
+})
+
+const isDev = import.meta.dev
+
+const storySource = computed(() => props.draft.memoryPlan?.storyMeta?.source ?? 'rule_fallback')
+const storyIssues = computed(() => props.draft.memoryPlan?.storyMeta?.issues ?? [])
+const storySourceLabel = computed(() => storySource.value === 'llm_polish' ? 'LLM润色' : '规则回退')
+const storySourceType = computed(() => storySource.value === 'llm_polish' ? 'success' : 'warning')
 </script>
 
 <style scoped>
@@ -124,6 +159,23 @@ defineProps<{
   white-space: pre-wrap;
   word-break: break-word;
   font-family: Consolas, 'Courier New', monospace;
+}
+
+.story-block {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.8;
+}
+
+.story-head {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 8px;
+}
+
+.story-issues {
+  margin-top: 8px;
 }
 
 @media (max-width: 760px) {

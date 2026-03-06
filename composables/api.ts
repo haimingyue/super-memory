@@ -43,6 +43,36 @@ export interface MemoryDraft {
     scenes?: string[]
     question?: string
   } | null
+  memoryPlan?: {
+    method?: string
+    topic?: string
+    keywords?: string[]
+    keyword_visuals?: Array<{
+      keyword?: string
+      visual?: string
+      reason?: string
+    }>
+    memory_scenes?: Array<{
+      scene_id?: number
+      type?: string
+      from?: string
+      to?: string
+      scene?: string
+      why_memorable?: string
+    }>
+    final_readable_story?: string
+    storyMeta?: {
+      style?: 'story_first'
+      source?: 'llm_polish' | 'rule_fallback'
+      aligned?: boolean
+      issues?: string[]
+      styleNotes?: string
+    }
+    quality?: {
+      issues?: string[]
+      source?: string
+    }
+  } | null
 }
 
 export interface MemoryCard {
