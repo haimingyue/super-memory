@@ -1,8 +1,9 @@
 <template>
   <el-card class="memory-draft-card" shadow="never">
     <div class="header-row">
-      <el-tag type="info" effect="light">{{ draft.typeLabel }}</el-tag>
-      <el-tag type="success" effect="light">{{ draft.methodLabel }}</el-tag>
+      <el-tag type="info" effect="light">{{ draft.contentType }}</el-tag>
+      <el-tag type="warning" effect="light">{{ draft.hookSystem }}</el-tag>
+      <el-tag type="success" effect="light">{{ draft.memoryMethod }}</el-tag>
     </div>
 
     <el-divider content-position="left">关键词</el-divider>
@@ -77,4 +78,3 @@ defineProps<{
   font-family: Consolas, 'Courier New', monospace;
 }
 </style>
-

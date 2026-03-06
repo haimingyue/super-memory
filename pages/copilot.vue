@@ -94,7 +94,7 @@
                 :draft="message.memoryDraft"
               />
               <MemoryCard
-                v-else-if="message.type === 'memory_final_card' && message.finalCard"
+                v-else-if="message.type === 'memory_card' && message.finalCard"
                 :card="message.finalCard"
                 @save="handleSaveCard"
               />
@@ -141,7 +141,7 @@ import { memoryChat, type MemoryCard as MemoryFinalCard, type MemoryDraft } from
 interface Message {
   id: string
   role: 'user' | 'assistant'
-  type: 'text' | 'memory_draft' | 'memory_final_card'
+  type: 'text' | 'memory_draft' | 'memory_card'
   content?: string
   memoryDraft?: MemoryDraft
   finalCard?: MemoryFinalCard
@@ -280,7 +280,7 @@ const handleSubmit = async () => {
       messages.value.push({
         id: newMessageId(),
         role: 'assistant',
-        type: 'memory_final_card',
+        type: 'memory_card',
         content: response.replyText,
         finalCard: response.finalCard,
       })

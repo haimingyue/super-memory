@@ -27,25 +27,17 @@ export interface MemorySolveData {
 }
 
 export interface MemoryDraft {
-  type: string
-  typeLabel: string
-  method: string
-  methodLabel: string
+  contentType: string
+  hookSystem: string
+  memoryMethod: string
   keywords: string[]
   imagery: string[]
   recap: string
 }
 
 export interface MemoryCard {
-  question: string
-  answer: string
-  keywords: string[]
-  imagery: string[]
-  recap: string
-  cardFormat: {
-    front: string
-    back: string
-  }
+  front: string
+  back: string
 }
 
 export interface MemoryChatResponse {

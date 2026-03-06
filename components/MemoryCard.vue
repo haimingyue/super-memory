@@ -14,23 +14,16 @@
     <el-divider content-position="left">正面 Front</el-divider>
     <el-alert :closable="false" type="info" show-icon>
       <template #default>
-        <pre class="card-face">{{ card.cardFormat.front }}</pre>
+        <pre class="card-face">{{ card.front }}</pre>
       </template>
     </el-alert>
 
     <el-divider content-position="left">反面 Back</el-divider>
     <el-alert :closable="false" type="success" show-icon>
       <template #default>
-        <pre class="card-face">{{ card.cardFormat.back }}</pre>
+        <pre class="card-face">{{ card.back }}</pre>
       </template>
     </el-alert>
-
-    <el-divider content-position="left">关键词</el-divider>
-    <div class="keywords-row">
-      <el-tag v-for="item in card.keywords" :key="item" class="keyword-tag" size="small" effect="plain">
-        {{ item }}
-      </el-tag>
-    </div>
   </el-card>
 </template>
 
@@ -48,7 +41,7 @@ const emit = defineEmits<{
 
 const copyBack = async () => {
   try {
-    await navigator.clipboard.writeText(props.card.cardFormat.back)
+    await navigator.clipboard.writeText(props.card.back)
     ElMessage.success('已复制到剪贴板')
   } catch {
     ElMessage.error('复制失败')
@@ -57,7 +50,7 @@ const copyBack = async () => {
 
 const exportAnki = async () => {
   try {
-    const tsv = `${props.card.cardFormat.front}\t${props.card.cardFormat.back}`
+    const tsv = `${props.card.front}\t${props.card.back}`
     await navigator.clipboard.writeText(tsv)
     ElMessage.success('Anki 文本已复制（Front<TAB>Back）')
   } catch {
@@ -92,16 +85,6 @@ const saveCard = () => {
 .action-row {
   display: flex;
   gap: 8px;
-}
-
-.keywords-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.keyword-tag {
-  margin: 0;
 }
 
 .card-face {
